@@ -1,0 +1,228 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  player
+  provider
+  admin
+}
+
+enum ModerationStatus {
+  pending
+  approved
+  rejected
+}
+
+enum EventType {
+  training
+  game
+}
+
+enum BookingStatus {
+  pending
+  confirmed
+  rejected
+  cancelled
+  completed
+}
+
+model User {
+  id                        String    @id @default(cuid())
+  name                      String
+  email                     String    @unique
+  passwordHash              String    @map("password_hash")
+  phone                     String?
+  photoUrl                  String?   @map("photo_url")
+  city                      String?
+  emailVerified             Boolean   @default(false) @map("email_verified")
+  emailVerificationToken    String?   @map("email_verification_token")
+  passwordResetToken        String?   @map("password_reset_token")
+  passwordResetTokenExpiry  DateTime? @map("password_reset_token_expiry")
+  createdAt                 DateTime  @default(now()) @map("created_at")
+  updatedAt                 DateTime  @updatedAt @map("updated_at")
+
+  roles         UserRole[]
+  providerInfo  ProviderInfo?
+  venues        Venue[]
+  events        Event[]
+  bookings      Booking[]
+  trainers      Trainer[]
+  registrations EventRegistration[]
+  sportLevels   PlayerSportLevel[]
+
+  @@map("users")
+}
+
+model UserRole {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  role      Role
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role])
+  @@map("user_roles")
+}
+
+model ProviderInfo {
+  userId              String            @id @map("user_id")
+  organizationName    String?           @map("organization_name")
+  description         String?
+  phone               String
+  sportTypes          String[]          @map("sport_types")
+  moderationStatus    ModerationStatus  @default(pending) @map("moderation_status")
+  rejectionReason     String?           @map("rejection_reason")
+  moderatedAt         DateTime?         @map("moderated_at")
+  createdAt           DateTime          @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("providers_info")
+}
+
+model Trainer {
+  id          String   @id @default(cuid())
+  providerId  String   @map("provider_id")
+  name        String
+  experience  String?
+  photo       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  provider User    @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  events   Event[]
+
+  @@index([providerId])
+  @@map("trainers")
+}
+
+model PlayerSportLevel {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  sportType  String   @map("sport_type")
+  level      String
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sportType])
+  @@index([userId])
+  @@map("player_sport_levels")
+}
+
+model Venue {
+  id                          String            @id @default(cuid())
+  providerId                  String            @map("provider_id")
+  name                        String
+  address                     String
+  city                        String
+  district                    String?
+  metro                       String?
+  sportTypes                  String[]          @map("sport_types")
+  surface                     String?
+  pricePerHour                Decimal           @map("price_per_hour") @db.Decimal(10, 2)
+  photos                      String[]
+  description                 String?
+  amenities                   String[]
+  nextSlot                    String?           @map("next_slot")
+  cancellationDeadlineHours   Int               @default(12) @map("cancellation_deadline_hours")
+  isPublicForRent             Boolean           @default(true) @map("is_public_for_rent")
+  moderationStatus            ModerationStatus  @default(pending) @map("moderation_status")
+  rejectionReason             String?           @map("rejection_reason")
+  moderatedAt                 DateTime?         @map("moderated_at")
+  createdAt                   DateTime          @default(now()) @map("created_at")
+  updatedAt                   DateTime          @updatedAt @map("updated_at")
+
+  provider User      @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  events   Event[]
+  bookings Booking[]
+
+  @@map("venues")
+}
+
+model Event {
+  id                          String     @id @default(cuid())
+  providerId                  String     @map("provider_id")
+  venueId                     String     @map("venue_id")
+  trainerId                   String?    @map("trainer_id")
+  type                        EventType
+  sportType                   String     @map("sport_type")
+  title                       String
+  description                 String?
+  level                       String?
+  specializations             String[]
+  trainerName                 String?    @map("trainer_name")
+  trainerExperience           String?    @map("trainer_experience")
+  trainerPhoto                String?    @map("trainer_photo")
+  eventDate                   DateTime   @map("event_date")
+  startTime                   String     @map("start_time")
+  endTime                     String     @map("end_time")
+  price                       Decimal    @db.Decimal(10, 2)
+  capacity                    Int
+  registered                  Int        @default(0)
+  registrationDeadlineHours   Int        @default(3) @map("registration_deadline_hours")
+  cancellationDeadlineHours   Int        @default(12) @map("cancellation_deadline_hours")
+  recurring                   Boolean    @default(false)
+  seriesId                    String?    @map("series_id")
+  status                      String     @default("active")
+  createdAt                   DateTime   @default(now()) @map("created_at")
+  updatedAt                   DateTime   @updatedAt @map("updated_at")
+
+  provider      User                @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  venue         Venue               @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  trainer       Trainer?            @relation(fields: [trainerId], references: [id], onDelete: Restrict)
+  registrations EventRegistration[]
+
+  @@map("events")
+}
+
+model EventRegistration {
+  id          String    @id @default(cuid())
+  eventId     String    @map("event_id")
+  playerId    String    @map("player_id")
+  status      String    @default("confirmed")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  cancelledAt DateTime? @map("cancelled_at")
+
+  event  Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  player User  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, playerId])
+  @@index([eventId])
+  @@index([playerId])
+  @@map("event_registrations")
+}
+
+model Booking {
+  id                 String        @id @default(cuid())
+  venueId            String        @map("venue_id")
+  playerId           String        @map("player_id")
+  date               DateTime      @db.Date
+  startTime          String        @map("start_time")
+  endTime            String        @map("end_time")
+  durationHours      Int           @map("duration_hours")
+  status             BookingStatus @default(confirmed)
+  comment            String?
+  cancellationReason String?       @map("cancellation_reason")
+  cancelledBy        String?       @map("cancelled_by")
+  totalPrice         Decimal       @map("total_price") @db.Decimal(10, 2)
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+
+  venue  Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  player User  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([venueId, date])
+  @@index([playerId])
+  @@map("bookings")
+}
