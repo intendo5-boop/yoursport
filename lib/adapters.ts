@@ -11,15 +11,10 @@ import type {
   MyRegistration,
 } from "./types"
 
-/**
- * Нормализует дату к формату YYYY-MM-DD.
- * Принимает: Date, строку ISO с временем, строку без времени.
- * Возвращает: YYYY-MM-DD или "" (если дата невалидная).
- */
-function normalizeDate(raw: Date | string | null | undefined): string {
+export function normalizeDate(raw: unknown): string {
   if (!raw) return ""
-  const d = typeof raw === "string" ? new Date(raw) : raw
-  if (isNaN(d.getTime())) return ""
+  const d = typeof raw === "string" ? new Date(raw) : (raw as Date)
+  if (!d || isNaN(d.getTime())) return ""
   return d.toISOString().slice(0, 10)
 }
 
@@ -43,7 +38,9 @@ export function adaptVenue(
     nextSlot: db.nextSlot ?? "—",
     amenities: db.amenities,
     moderationStatus: db.moderationStatus,
+    rejectionReason: db.rejectionReason ?? null,
     publicBooking: db.isPublicForRent,
+    cancellationDeadlineHours: db.cancellationDeadlineHours,
   }
 }
 
@@ -177,7 +174,6 @@ export function adaptMyRegistration(db: {
       ? db.createdAt
       : (db.createdAt as Date).toISOString()
 
-  // Вычисляем дату-время события
   const [hours, minutes] = db.event.startTime.split(":").map(Number)
   const eventDateTime = new Date(`${eventDate}T00:00:00`)
   eventDateTime.setHours(hours, minutes ?? 0, 0, 0)
@@ -186,13 +182,8 @@ export function adaptMyRegistration(db: {
   const hoursUntilEvent =
     (eventDateTime.getTime() - now.getTime()) / (1000 * 60 * 60)
 
-  // past — ТОЛЬКО по дате события (время начала уже прошло)
   const isPast = eventDateTime.getTime() < now.getTime()
 
-  // canCancel — можно отменить, если:
-  // - не прошло
-  // - статус confirmed
-  // - до начала больше, чем cancellationDeadlineHours
   const canCancel =
     !isPast &&
     db.status === "confirmed" &&

@@ -1,20 +1,34 @@
-import { notFound } from "next/navigation"
-import { ProviderShell } from "@/components/shells/provider-shell"
+import { notFound, redirect } from "next/navigation"
+import { prismaDirect } from "@/lib/prisma"
+import { getSession } from "@/lib/auth"
+import { adaptVenue } from "@/lib/adapters"
 import { VenueForm } from "@/components/provider/venue-form"
-import { PROVIDER_VENUES } from "@/lib/mock-data"
 
-export function generateStaticParams() {
-  return PROVIDER_VENUES.map((v) => ({ id: v.id }))
-}
+export const runtime = "nodejs"
 
-export default async function EditVenuePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditVenuePage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  const session = await getSession()
+  if (!session) redirect("/login")
+  if (!session.roles.includes("provider")) redirect("/dashboard")
+
   const { id } = await params
-  const venue = PROVIDER_VENUES.find((v) => v.id === id)
-  if (!venue) notFound()
 
-  return (
-    <ProviderShell>
-      <VenueForm venue={venue} />
-    </ProviderShell>
-  )
+  const dbVenue = await prismaDirect.venue.findFirst({
+    where: { id, providerId: session.userId },
+    include: {
+      provider: {
+        select: { name: true, phone: true },
+      },
+    },
+  })
+
+  if (!dbVenue) notFound()
+
+  const venue = adaptVenue(dbVenue)
+
+  return <VenueForm venue={venue} />
 }

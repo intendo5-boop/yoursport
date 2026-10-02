@@ -3,6 +3,7 @@ export const runtime = "nodejs"
 import { NextResponse } from "next/server"
 import { prismaDirect } from "@/lib/prisma"
 import { getSession } from "@/lib/auth"
+import { normalizeDate } from "@/lib/adapters"
 
 export async function DELETE(
   request: Request,
@@ -48,14 +49,14 @@ export async function DELETE(
 
     // Проверка дедлайна — только для игрока. Провайдер может отменить в любой момент.
     if (isPlayer) {
-      const bookingDate =
-        typeof booking.date === "string"
-          ? booking.date.slice(0, 10)
-          : (booking.date as Date).toISOString().slice(0, 10)
+      const bookingDate = normalizeDate(booking.date)
       const startH = parseInt(booking.startTime.split(":")[0], 10)
-      const startAt = new Date(`${bookingDate}T${String(startH).padStart(2, "0")}:00:00.000Z`)
+      const startAt = new Date(
+        `${bookingDate}T${String(startH).padStart(2, "0")}:00:00.000Z`
+      )
       const now = new Date()
-      const hoursUntilStart = (startAt.getTime() - now.getTime()) / (1000 * 60 * 60)
+      const hoursUntilStart =
+        (startAt.getTime() - now.getTime()) / (1000 * 60 * 60)
 
       if (hoursUntilStart < booking.venue.cancellationDeadlineHours) {
         return NextResponse.json(
@@ -83,8 +84,6 @@ export async function DELETE(
         cancelledBy: isProvider ? "provider" : "player",
       },
     })
-
-    // TODO (Этап 7.x): отправка email игроку, если отменил провайдер
 
     return NextResponse.json({ success: true, booking: updated })
   } catch (error) {

@@ -36,7 +36,9 @@ export interface Venue {
   nextSlot: string
   amenities: string[]
   moderationStatus: ModerationStatus
+  rejectionReason: string | null
   publicBooking: boolean
+  cancellationDeadlineHours: number
 }
 
 export interface Trainer {

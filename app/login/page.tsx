@@ -33,21 +33,21 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        setError(data.error || "Ошибка входа")
+        setError(data.error || "Неверный email или пароль")
         setIsLoading(false)
         return
       }
 
-      router.push("/venues")
+      router.push("/events")
       router.refresh()
     } catch {
-      setError("Что-то пошло не так")
+      setError("Ошибка сети. Попробуйте снова.")
       setIsLoading(false)
     }
   }
 
   return (
-    <AuthShell heading="Welcome back" subheading="Sign in to book courts and join sessions.">
+    <AuthShell heading="Welcome back" subheading="Sign in to join training sessions and games.">
       <form onSubmit={onSubmit} className="flex flex-col gap-5">
         {error && (
           <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">

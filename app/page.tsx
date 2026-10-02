@@ -16,26 +16,24 @@ import { Card } from "@/components/ui/card"
 const features = [
   {
     icon: Search,
-    title: "Find courts & pitches",
-    body: "Browse volleyball and football venues near you, filter by sport, price and location, and see the next available slot at a glance.",
+    title: "Find training & games",
+    body: "Browse volleyball and football sessions near you, filter by sport, level and specialization, and see the next available slot at a glance.",
   },
   {
     icon: CalendarDays,
     title: "Join training & games",
-    body: "Discover coach-led sessions and pickup games matched to your skill level, with clear spots-left counts and level breakdowns.",
+    body: "Discover coach-led sessions and pickup games matched to your skill level, with clear spots-left counts and trainer profiles.",
   },
   {
     icon: MapPin,
-    title: "Book in seconds",
-    body: "Pick a slot, add a note, and send your request. Track confirmation status right from your dashboard.",
+    title: "Register in seconds",
+    body: "Pick a session, add a note, and confirm your spot. Track everything from your personal dashboard.",
   },
 ]
 
 const explore = [
-  { href: "/venues", label: "Venue catalog", icon: MapPin, desc: "Player browsing view" },
   { href: "/events", label: "Events catalog", icon: CalendarDays, desc: "Training & games" },
   { href: "/provider", label: "Provider console", icon: Goal, desc: "Manage venues & events" },
-  { href: "/admin/moderation", label: "Admin console", icon: ShieldCheck, desc: "Moderation & analytics" },
 ]
 
 export default function LandingPage() {
@@ -43,7 +41,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 border-b border-border bg-card/90 backdrop-blur">
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
-          <Logo />
+          <Logo href="/events" />
           <div className="flex items-center gap-2">
             <ButtonLink variant="ghost" size="lg" href="/login">
               Sign in
@@ -64,34 +62,34 @@ export default function LandingPage() {
               Volleyball & Football, one platform
             </span>
             <h1 className="text-4xl font-bold leading-[1.1] tracking-tight text-foreground sm:text-5xl md:text-6xl">
-              Book the court.
+              Find your game.
               <br />
-              <span className="text-primary">Join the game.</span>
+              <span className="text-primary">Join the session.</span>
             </h1>
             <p className="max-w-md text-lg text-muted-foreground">
-              Rally connects players with venues and training providers. Find a slot, register for
-              coach-led sessions, and play more — all in one place.
+              Rally connects players with training providers. Find a session, register for
+              coach-led training, and play more — all in one place.
             </p>
             <div className="flex flex-wrap items-center gap-3">
-              <ButtonLink size="lg" className="h-11 px-6 text-base" href="/venues">
-                Explore venues
+              <ButtonLink size="lg" className="h-11 px-6 text-base" href="/events">
+                Browse events
                 <ArrowRight />
               </ButtonLink>
               <ButtonLink
                 variant="outline"
                 size="lg"
                 className="h-11 px-6 text-base"
-                href="/events"
+                href="/register"
               >
-                Browse events
+                Get started
               </ButtonLink>
             </div>
             <div className="flex items-center gap-6 pt-2 text-sm text-muted-foreground">
               <span className="inline-flex items-center gap-1.5">
                 <Star className="size-4 fill-amber-400 text-amber-400" />
-                4.8 average venue rating
+                Coach-led sessions
               </span>
-              <span>120+ weekly sessions</span>
+              <span>Weekly training & games</span>
             </div>
           </div>
 
@@ -133,11 +131,11 @@ export default function LandingPage() {
 
       <section className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6">
         <div className="rounded-3xl border border-border bg-card p-6 sm:p-10">
-          <h2 className="text-2xl font-bold tracking-tight">Explore the prototype</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Explore the platform</h2>
           <p className="mt-1 text-muted-foreground">
-            Jump into any part of the platform. This is a clickable demo with sample data.
+            Jump into any part of the platform.
           </p>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
             {explore.map((e) => {
               const Icon = e.icon
               return (
@@ -165,8 +163,8 @@ export default function LandingPage() {
 
       <footer className="border-t border-border">
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-3 px-4 py-8 text-sm text-muted-foreground sm:flex-row sm:px-6">
-          <Logo />
-          <p>Rally — a two-sided sports marketplace prototype.</p>
+          <Logo href="/events" />
+          <p>Rally — sports marketplace.</p>
         </div>
       </footer>
     </div>

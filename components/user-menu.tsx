@@ -113,17 +113,19 @@ export function UserMenu() {
               className="block px-3 py-2 text-sm transition-colors hover:bg-muted"
               onClick={() => setMenuOpen(false)}
             >
-              Личный кабинет
+              Мои записи
             </Link>
           )}
 
-          <Link
-            href="/bookings"
-            className="block px-3 py-2 text-sm transition-colors hover:bg-muted"
-            onClick={() => setMenuOpen(false)}
-          >
-            Мои брони
-          </Link>
+          {primaryRole === "admin" && (
+            <Link
+              href="/admin/moderation"
+              className="block px-3 py-2 text-sm transition-colors hover:bg-muted"
+              onClick={() => setMenuOpen(false)}
+            >
+              Админ-панель
+            </Link>
+          )}
 
           <button
             type="button"

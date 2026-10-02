@@ -46,7 +46,8 @@ export async function GET(
     // Формируем список занятых часов (08:00–23:00)
     const occupiedHours = new Set<string>()
 
-    function markOccupied(start: string, end: string) {
+    // Функция через const + стрелка — не вызывает ошибку strict mode ES5
+    const markOccupied = (start: string, end: string) => {
       const startH = parseInt(start.split(":")[0], 10)
       const endH = parseInt(end.split(":")[0], 10)
       for (let h = startH; h < endH; h++) {
