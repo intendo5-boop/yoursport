@@ -12,7 +12,6 @@ import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { CITIES, SPORT_LABELS } from "@/lib/mock-data"
-import { supabase } from "@/lib/supabase"
 import type { Sport, Venue } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -77,27 +76,24 @@ export function VenueForm({ venue }: { venue?: Venue }) {
           return
         }
 
-        const ext = file.name.split(".").pop() ?? "jpg"
-        const filename = `uploads/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+        const formData = new FormData()
+        formData.append("file", file)
+        formData.append("folder", "venues")
 
-        const { error: uploadError } = await supabase.storage
-          .from("venues")
-          .upload(filename, file, {
-            contentType: file.type,
-            upsert: false,
-          })
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        })
 
-        if (uploadError) {
-          setError("Ошибка загрузки: " + uploadError.message)
+        const data = await res.json()
+
+        if (!res.ok) {
+          setError(data.error || "Ошибка загрузки фото")
           setUploading(false)
           return
         }
 
-        const { data: urlData } = supabase.storage
-          .from("venues")
-          .getPublicUrl(filename)
-
-        newUrls.push(urlData.publicUrl)
+        newUrls.push(data.url)
       }
 
       setPhotos((prev) => [...prev, ...newUrls])

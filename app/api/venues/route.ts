@@ -36,7 +36,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
     if (!session.roles.includes("provider")) {
-      return NextResponse.json({ error: "Только провайдер может создавать площадки" }, { status: 403 })
+      return NextResponse.json(
+        { error: "Только провайдер может создавать площадки" },
+        { status: 403 }
+      )
     }
 
     const body = await request.json()
@@ -77,7 +80,8 @@ export async function POST(request: Request) {
         amenities: amenities ?? [],
         photos: photos ?? [],
         cancellationDeadlineHours: Number(cancellationDeadlineHours ?? 12),
-        moderationStatus: "approved",
+        // Всегда pending при создании. Одобряет админ отдельно.
+        moderationStatus: "pending",
       },
     })
 

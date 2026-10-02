@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Avatar } from "@/components/ui/avatar"
-import { supabase } from "@/lib/supabase"
 
 interface DbTrainer {
   id: string
@@ -20,7 +19,7 @@ interface DbTrainer {
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
-  trainer: DbTrainer | null  // null = создание нового
+  trainer: DbTrainer | null
   onSuccess?: (trainer: DbTrainer) => void
 }
 
@@ -36,7 +35,6 @@ export function TrainerFormModal({ open, onOpenChange, trainer, onSuccess }: Pro
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Сброс состояния при каждом открытии модалки
   useEffect(() => {
     if (open) {
       setName(trainer?.name ?? "")
@@ -69,23 +67,23 @@ export function TrainerFormModal({ open, onOpenChange, trainer, onSuccess }: Pro
         return
       }
 
-      const ext = file.name.split(".").pop() ?? "jpg"
-      const filename = `trainers/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("folder", "trainers")
 
-      const { error: uploadError } = await supabase.storage
-        .from("venues")
-        .upload(filename, file, { contentType: file.type, upsert: false })
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
 
-      if (uploadError) {
-        setError("Ошибка загрузки: " + uploadError.message)
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data.error || "Ошибка загрузки фото")
         return
       }
 
-      const { data: urlData } = supabase.storage
-        .from("venues")
-        .getPublicUrl(filename)
-
-      setPhoto(urlData.publicUrl)
+      setPhoto(data.url)
     } catch {
       setError("Ошибка сети при загрузке фото")
     } finally {

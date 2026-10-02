@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { MapPin, Clock, Ticket, CalendarDays, Loader2, Users } from "lucide-react"
+import { MapPin, Clock, Ticket, CalendarDays, Loader2, Users, AlertCircle } from "lucide-react"
 import { PlayerShell } from "@/components/shells/player-shell"
 import { Card } from "@/components/ui/card"
 import { ButtonLink } from "@/components/ui/button-link"
@@ -65,8 +65,11 @@ export default function DashboardPage() {
 
       // Обновляем локально
       setRegistrations((prev) =>
-        prev.map((r) => (r.id === reg.id ? { ...r, status: "cancelled", canCancel: false } : r))
+        prev.map((r) =>
+          r.id === reg.id ? { ...r, status: "cancelled", canCancel: false } : r
+        )
       )
+      router.refresh()
     } catch {
       setError("Ошибка сети")
     } finally {
@@ -74,8 +77,9 @@ export default function DashboardPage() {
     }
   }
 
-  const upcoming = registrations.filter((r) => !r.past && r.status === "confirmed")
-  const past = registrations.filter((r) => r.past || r.status === "cancelled")
+  // Группировка ТОЛЬКО по дате — past = время начала события уже прошло
+  const upcoming = registrations.filter((r) => !r.past)
+  const past = registrations.filter((r) => r.past)
 
   return (
     <PlayerShell>
@@ -102,13 +106,21 @@ export default function DashboardPage() {
         ) : (
           <>
             <div className="grid gap-3 sm:grid-cols-3">
-              <Stat label="Upcoming" value={upcoming.length} icon={<CalendarDays className="size-5" />} />
+              <Stat
+                label="Upcoming"
+                value={upcoming.length}
+                icon={<CalendarDays className="size-5" />}
+              />
               <Stat
                 label="Completed"
-                value={registrations.filter((r) => r.past && r.status === "confirmed").length}
+                value={past.filter((r) => r.status === "confirmed").length}
                 icon={<Ticket className="size-5" />}
               />
-              <Stat label="Total" value={registrations.length} icon={<Clock className="size-5" />} />
+              <Stat
+                label="Total"
+                value={registrations.length}
+                icon={<Clock className="size-5" />}
+              />
             </div>
 
             <Tabs defaultValue="upcoming">
@@ -151,7 +163,15 @@ export default function DashboardPage() {
   )
 }
 
-function Stat({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
+function Stat({
+  label,
+  value,
+  icon,
+}: {
+  label: string
+  value: number
+  icon: React.ReactNode
+}) {
   return (
     <Card className="flex items-center gap-3 p-4">
       <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -187,13 +207,19 @@ function RegistrationRow({
           <span className="text-xs uppercase tracking-wide text-muted-foreground">
             {registration.eventType === "training" ? "Training" : "Game"}
           </span>
-          {isCancelled && <Badge variant="danger">Отменено</Badge>}
+          {isCancelled && !registration.past && (
+            <Badge variant="danger">
+              <AlertCircle className="size-3" />
+              Отменено
+            </Badge>
+          )}
         </div>
         <span className="font-semibold leading-tight">{registration.eventTitle}</span>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 text-sm text-muted-foreground">
           <span className="flex items-center gap-1.5">
             <Clock className="size-3.5" />
-            {formatDate(registration.eventDate)} · {registration.startTime}–{registration.endTime}
+            {formatDate(registration.eventDate)} · {registration.startTime}–
+            {registration.endTime}
           </span>
           <span className="flex items-center gap-1.5">
             <MapPin className="size-3.5" />
@@ -202,11 +228,12 @@ function RegistrationRow({
         </div>
       </div>
       <div className="flex items-center gap-3 sm:flex-col sm:items-end">
-        {!isCancelled && !registration.past && (
-          <Badge variant="success">Confirmed</Badge>
-        )}
-        {registration.past && !isCancelled && (
+        {!isCancelled && !registration.past && <Badge variant="success">Confirmed</Badge>}
+        {!isCancelled && registration.past && (
           <Badge variant="neutral">Completed</Badge>
+        )}
+        {isCancelled && registration.past && (
+          <Badge variant="neutral">Отменено</Badge>
         )}
         {registration.canCancel && onCancel && (
           <Button

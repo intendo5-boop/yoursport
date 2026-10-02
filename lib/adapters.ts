@@ -11,6 +11,18 @@ import type {
   MyRegistration,
 } from "./types"
 
+/**
+ * Нормализует дату к формату YYYY-MM-DD.
+ * Принимает: Date, строку ISO с временем, строку без времени.
+ * Возвращает: YYYY-MM-DD или "" (если дата невалидная).
+ */
+function normalizeDate(raw: Date | string | null | undefined): string {
+  if (!raw) return ""
+  const d = typeof raw === "string" ? new Date(raw) : raw
+  if (isNaN(d.getTime())) return ""
+  return d.toISOString().slice(0, 10)
+}
+
 export function adaptVenue(
   db: PrismaVenue & { provider?: { name: string; phone: string | null } | null }
 ): UIVenue {
@@ -52,19 +64,12 @@ export function adaptEvent(
     registrations?: Array<{ status: string }>
   }
 ): SportEvent {
-  const eventDate =
-    typeof db.eventDate === "string"
-      ? db.eventDate
-      : (db.eventDate as Date).toISOString().slice(0, 10)
+  const eventDate = normalizeDate(db.eventDate)
 
   const trainerName = db.trainer?.name ?? db.trainerName ?? ""
   const trainerPhoto = db.trainer?.photo ?? db.trainerPhoto ?? ""
   const trainerExperience = db.trainer?.experience ?? db.trainerExperience ?? ""
 
-  // Считаем registered:
-  // 1. Если переданы registrations — считаем confirmed
-  // 2. Если передан _count — используем его
-  // 3. Иначе — используем поле из БД
   let registered = db.registered
   if (Array.isArray(db.registrations)) {
     registered = db.registrations.filter((r) => r.status === "confirmed").length
@@ -147,45 +152,47 @@ export function adaptRegistration(
   }
 }
 
-export function adaptMyRegistration(
-  db: {
-    id: string
-    eventId: string
-    status: string
-    createdAt: Date | string
-    event: {
-      title: string
-      sportType: string
-      type: string
-      eventDate: Date | string
-      startTime: string
-      endTime: string
-      price: unknown
-      registrationDeadlineHours: number
-      cancellationDeadlineHours: number
-      venue: { name: string }
-    }
+export function adaptMyRegistration(db: {
+  id: string
+  eventId: string
+  status: string
+  createdAt: Date | string
+  event: {
+    title: string
+    sportType: string
+    type: string
+    eventDate: Date | string
+    startTime: string
+    endTime: string
+    price: unknown
+    registrationDeadlineHours: number
+    cancellationDeadlineHours: number
+    venue: { name: string }
   }
-): MyRegistration {
-  const eventDate =
-    typeof db.event.eventDate === "string"
-      ? db.event.eventDate
-      : (db.event.eventDate as Date).toISOString().slice(0, 10)
+}): MyRegistration {
+  const eventDate = normalizeDate(db.event.eventDate)
 
   const createdAt =
     typeof db.createdAt === "string"
       ? db.createdAt
       : (db.createdAt as Date).toISOString()
 
-  // Проверка «можно ли отменить»
+  // Вычисляем дату-время события
   const [hours, minutes] = db.event.startTime.split(":").map(Number)
   const eventDateTime = new Date(`${eventDate}T00:00:00`)
   eventDateTime.setHours(hours, minutes ?? 0, 0, 0)
 
   const now = new Date()
-  const hoursUntilEvent = (eventDateTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+  const hoursUntilEvent =
+    (eventDateTime.getTime() - now.getTime()) / (1000 * 60 * 60)
 
+  // past — ТОЛЬКО по дате события (время начала уже прошло)
   const isPast = eventDateTime.getTime() < now.getTime()
+
+  // canCancel — можно отменить, если:
+  // - не прошло
+  // - статус confirmed
+  // - до начала больше, чем cancellationDeadlineHours
   const canCancel =
     !isPast &&
     db.status === "confirmed" &&

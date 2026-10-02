@@ -70,7 +70,13 @@ export default function RegisterPage() {
         return
       }
 
-      router.push(`/verify-email?email=${encodeURIComponent(email)}`)
+      // Регистрация успешна + сессия создана → редирект по роли
+      if (role === "provider") {
+        router.push("/provider")
+      } else {
+        router.push("/onboarding")
+      }
+      router.refresh()
     } catch (err) {
       setError("Network error. Please try again.")
       setIsLoading(false)

@@ -16,6 +16,13 @@ export async function GET() {
       include: {
         venue: { select: { name: true } },
         trainer: true,
+        _count: {
+          select: {
+            registrations: {
+              where: { status: "confirmed" },
+            },
+          },
+        },
       },
       orderBy: { eventDate: "desc" },
     })

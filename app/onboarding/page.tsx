@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { Tooltip } from "@/components/ui/tooltip"
 import { CITIES, SKILL_LEVELS, SPORT_LABELS } from "@/lib/mock-data"
-import { supabase } from "@/lib/supabase"
 import type { Sport } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -33,7 +32,6 @@ export default function OnboardingPage() {
     football: "D2",
   })
 
-  // Загрузка текущего профиля
   useEffect(() => {
     let cancelled = false
 
@@ -52,7 +50,9 @@ export default function OnboardingPage() {
         if (sessionData.session) {
           setName(sessionData.session.name ?? "")
           setCity(sessionData.session.city ?? CITIES[0]?.name ?? "")
-          // photoUrl пока не в сессии — оставляем пустым
+          if (sessionData.session.photoUrl) {
+            setPhoto(sessionData.session.photoUrl)
+          }
         }
 
         if (levelsData.levels && levelsData.levels.length > 0) {
@@ -112,23 +112,23 @@ export default function OnboardingPage() {
         return
       }
 
-      const ext = file.name.split(".").pop() ?? "jpg"
-      const filename = `avatars/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("folder", "avatars")
 
-      const { error: uploadError } = await supabase.storage
-        .from("venues")
-        .upload(filename, file, { contentType: file.type, upsert: false })
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
 
-      if (uploadError) {
-        setError("Ошибка загрузки: " + uploadError.message)
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data.error || "Ошибка загрузки фото")
         return
       }
 
-      const { data: urlData } = supabase.storage
-        .from("venues")
-        .getPublicUrl(filename)
-
-      setPhoto(urlData.publicUrl)
+      setPhoto(data.url)
     } catch {
       setError("Ошибка сети при загрузке фото")
     } finally {
@@ -153,7 +153,6 @@ export default function OnboardingPage() {
     setSaving(true)
 
     try {
-      // 1. Сохранить город и фото в профиль
       const profileRes = await fetch("/api/me/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -167,7 +166,6 @@ export default function OnboardingPage() {
         return
       }
 
-      // 2. Сохранить уровни
       const levelsPayload = sports.map((s) => ({
         sportType: s,
         level: levels[s],

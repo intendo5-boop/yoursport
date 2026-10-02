@@ -1,8 +1,10 @@
+export const runtime = "nodejs"
+
 import { NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import crypto from "crypto"
-import { prisma, prismaDirect } from "@/lib/prisma"
-// import { sendVerificationEmail } from "@/lib/email"
+import { prismaDirect } from "@/lib/prisma"
+import { createSession } from "@/lib/auth"
 
 export async function POST(request: Request) {
   try {
@@ -37,8 +39,7 @@ export async function POST(request: Request) {
       )
     }
 
-    // Проверка существующего email — быстрый запрос, можно через обычный prisma
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await prismaDirect.user.findUnique({
       where: { email },
     })
 
@@ -52,8 +53,7 @@ export async function POST(request: Request) {
     const passwordHash = await bcrypt.hash(password, 10)
     const emailVerificationToken = crypto.randomBytes(32).toString("hex")
 
-    // ВАЖНО: сложная транзакция (user + user_roles + providerInfo)
-    // идёт через prismaDirect (Session mode, порт 5432) — не обрывается пулером
+    // Создаём пользователя — сначала user
     const user = await prismaDirect.user.create({
       data: {
         name,
@@ -61,30 +61,43 @@ export async function POST(request: Request) {
         passwordHash,
         phone,
         emailVerificationToken,
-        roles: {
-          create: { role },
-        },
-        ...(role === "provider" && {
-          providerInfo: {
-            create: {
-              phone,
-              sportTypes: [],
-              moderationStatus: "pending",
-            },
-          },
-        }),
       },
-      include: { roles: true },
     })
 
-    // Отправка письма — временно закомментируем, если нет ключа Resend
-    // await sendVerificationEmail(email, emailVerificationToken)
+    // Создаём роль — отдельным запросом
+    await prismaDirect.userRole.create({
+      data: {
+        userId: user.id,
+        role,
+      },
+    })
+
+    // Если провайдер — создаём providers_info
+    if (role === "provider") {
+      await prismaDirect.providerInfo.create({
+        data: {
+          userId: user.id,
+          phone,
+          sportTypes: [],
+          moderationStatus: "pending",
+        },
+      })
+    }
+
+    // Автоматически логиним — создаём JWT-сессию
+    await createSession({
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      roles: [role],
+    })
 
     return NextResponse.json(
       {
         success: true,
         message: "Регистрация успешна",
         userId: user.id,
+        role,
       },
       { status: 201 }
     )

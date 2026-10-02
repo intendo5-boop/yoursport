@@ -7,10 +7,24 @@ import { getSession } from "@/lib/auth"
 export async function GET() {
   try {
     const events = await prismaDirect.event.findMany({
-      where: { status: "active" },
+      where: {
+        status: "active",
+        // Показываем только события, у которых площадка одобрена.
+        // Если площадка pending — событие не видно игрокам.
+        venue: {
+          moderationStatus: "approved",
+        },
+      },
       include: {
         venue: { select: { name: true } },
         trainer: true,
+        _count: {
+          select: {
+            registrations: {
+              where: { status: "confirmed" },
+            },
+          },
+        },
       },
       orderBy: { eventDate: "asc" },
     })

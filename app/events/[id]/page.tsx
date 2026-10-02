@@ -7,6 +7,11 @@ import { adaptEvent } from "@/lib/adapters"
 
 export const runtime = "nodejs"
 
+// Отключаем кеш Next.js — страница должна всегда перезапрашивать данные,
+// чтобы после отмены записи игрок видел актуальный статус (не "Вы записаны")
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export default async function EventPage({
   params,
 }: {
@@ -32,7 +37,7 @@ export default async function EventPage({
 
   if (!dbEvent) notFound()
 
-  // Проверка: записан ли текущий пользователь
+  // Проверка: записан ли текущий пользователь (только confirmed)
   let isRegistered = false
   if (session) {
     const reg = await prismaDirect.eventRegistration.findUnique({
